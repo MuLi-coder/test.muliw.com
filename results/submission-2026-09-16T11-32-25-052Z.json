@@ -1,0 +1,22 @@
+{
+  "submittedAt": "2026-09-16T11:32:25.052Z",
+  "choices": {
+    "tiananmen": "go",
+    "forbidden-city": "go",
+    "national-museum": "go",
+    "chairman-ma-memorial": "go",
+    "great-hall": "go",
+    "badaling-great-wall": "go",
+    "summer-palace": "go",
+    "old-summer-palace": "go",
+    "temple-of-heaven": "go",
+    "jingshan-park": "go",
+    "prince-gong-mansion": "not",
+    "beihai-park": "not",
+    "yonghegong": "not",
+    "wangfujing": "go",
+    "pku": "go",
+    "tsinghua": "go",
+    "ruc": "go"
+  }
+}
