@@ -8,9 +8,9 @@ import { spots } from '@/lib/spots';
 const STORAGE_KEY = 'spot_choices';
 
 export default function SummaryPage() {
+  const router = useRouter();
   const [choices, setChoices] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -33,7 +33,6 @@ export default function SummaryPage() {
   async function handleSubmit() {
     setSubmitting(true);
     setError('');
-    setResult(null);
     try {
       const res = await fetch('/api/submit', {
         method: 'POST',
@@ -42,7 +41,7 @@ export default function SummaryPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '提交失败');
-      setResult(data);
+      router.push('/results');
     } catch (e) {
       setError(String((e && e.message) || e));
     } finally {
@@ -88,11 +87,6 @@ export default function SummaryPage() {
       </div>
 
       {error && <p className="error">提交失败：{error}</p>}
-      {result && (
-        <p className="success">
-          {result.storage === 'kv' ? '提交成功，结果已保存' : `已保存到 ${result.file}`}
-        </p>
-      )}
     </main>
   );
 }
