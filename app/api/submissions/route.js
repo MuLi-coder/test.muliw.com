@@ -19,18 +19,47 @@ const TOKEN_KEYS = [
   'REDIS_TOKEN',
 ];
 
-// 从环境变量里找到 Redis 连接信息并建立连接；找不到/失败返回 null
+// 解析 redis:// 或 rediss:// 连接串，提取 REST 地址和密码（token）
+function parseRedisUrl(raw) {
+  const s = String(raw || '').trim();
+  const m = s.match(/^rediss?:\/\/([^@/]+)@([^:/]+)(?::\d+)?/);
+  if (!m) return null;
+  const auth = m[1];
+  const host = m[2];
+  const idx = auth.indexOf(':');
+  const token = idx >= 0 ? auth.slice(idx + 1) : auth;
+  return { url: `https://${host}`, token };
+}
+
 function getRedis() {
   const env = process.env;
 
+  // 1) 只有 redis:// 连接串（Vercel 注入的是 REDIS_URL，密码内嵌），直接解析
+  const connStr = env.REDIS_URL || env.UPSTASH_REDIS_URL || env.KV_URL;
+  if (connStr && /^redis?s?:\/\//.test(connStr)) {
+    const parsed = parseRedisUrl(connStr);
+    if (parsed) {
+      try {
+        return new Redis({
+          url: parsed.url,
+          token: parsed.token,
+          enableAutoPipelining: false,
+        });
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  // 2) 显式 REST URL + token 两个变量
   let url = '';
+  let token = '';
   for (const k of URL_KEYS) {
     if (env[k]) {
       url = env[k];
       break;
     }
   }
-  let token = '';
   for (const k of TOKEN_KEYS) {
     if (env[k]) {
       token = env[k];
@@ -38,7 +67,7 @@ function getRedis() {
     }
   }
 
-  // 兜底：按变量名动态发现（兼容自定义前缀）——名字里含 redis/upstash/kv 且带 url/token
+  // 3) 动态发现兜底（兼容自定义前缀）
   if (!url || !token) {
     const keys = Object.keys(env);
     if (!url) {
@@ -58,7 +87,6 @@ function getRedis() {
   if (!url || !token) return null;
 
   let restUrl = String(url).trim();
-  // redis:// 协议统一转成 REST 的 https 端点
   if (/^redis?s?:\/\//.test(restUrl)) {
     restUrl = 'https://' + restUrl.replace(/^redis?s?:\/\//, '');
   }
