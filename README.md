@@ -7,7 +7,7 @@
 - **首页**：规则说明 + 22 个景点候选总览
 - **景点页**：逐个展示景点图片 + 简介，选择「可以考虑去 / 不是很想去」，支持上一个 / 下一个
 - **统计页**：统一勾选想去的景点（可修改），底部提交
-- **结果页**：提交后展示后端列表中保存的所有提交记录
+- **结果页**：提交后展示所有历史提交记录
 
 ## 本地运行
 
@@ -20,18 +20,26 @@ npm run dev
 
 ## 提交结果保存
 
-提交后，每次结果作为一个字典（对象）追加到后端内存列表中（`lib/store.js`），
-包含提交时间和每个景点的选择；提交完成后跳转到结果页，从该列表读取并展示。
+提交后，每次结果作为一个字典（对象）追加保存，包含提交时间和每个景点的选择；
+提交完成后跳转到结果页，读取并展示。
 
-> 注意：内存列表在进程重启后会清空。部署到 Vercel（Serverless）时，
-> 函数实例不常驻、多实例之间互不共享，内存数据无法持久、且不稳定。
-> 如需正式留存结果，建议后续接入 Vercel KV / Blob 等持久化存储。
+- **Vercel 部署**：结果存入 Vercel KV（`@vercel/kv`），列表键为 `submissions`。
+- **本地开发**：未配置 KV 环境变量时，自动回退为内存列表（`lib/store.js`）。
+
+### 在 Vercel 配置 KV（必须）
+
+1. Vercel 项目 → **Storage** → **Create Database** → 选 **KV (Redis)** → 创建。
+2. 弹窗选择 **Connect**，把它关联到本项目。
+3. 回到 **Deployments** 重新部署一次（或 Git Push），让环境变量生效。
+
+> 配置完成后 `KV_REST_API_URL`、`KV_REST_API_TOKEN` 会自动注入，无需手动填写。
 
 ## 技术栈
 
 - Next.js 14（App Router）
 - React 18
 - 原生 JavaScript（JSX）
+- @vercel/kv（提交结果持久化，本地回退内存列表）
 - 图片为网络搜索获取，可随时在 `lib/spots.js` 中替换为自有图片
 
 ## 目录结构
@@ -39,8 +47,8 @@ npm run dev
 ```
 .
 ├── app/
-│   ├── api/submit/route.js      # 提交 API（写入内存列表）
-│   ├── api/submissions/route.js # 读取内存列表 API
+│   ├── api/submit/route.js      # 提交 API（KV / 本地内存）
+│   ├── api/submissions/route.js # 读取提交结果 API
 │   ├── spot/[index]/page.jsx    # 景点详情页
 │   ├── summary/page.jsx         # 统计页
 │   ├── results/page.jsx         # 提交结果展示页
@@ -48,6 +56,6 @@ npm run dev
 │   ├── page.jsx                 # 首页
 │   └── globals.css
 ├── lib/spots.js                 # 景点数据
-├── lib/store.js                 # 内存列表存储（元素为字典）
+├── lib/store.js                 # 本地开发内存列表兜底
 └── package.json
 ```

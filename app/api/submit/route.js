@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { kv } from '@vercel/kv';
 import { addSubmission } from '@/lib/store';
 
 export async function POST(request) {
@@ -19,7 +20,20 @@ export async function POST(request) {
     choices,
   };
 
-  addSubmission(record);
+  // Vercel：走 KV 持久化
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    try {
+      await kv.lpush('submissions', JSON.stringify(record));
+      return NextResponse.json({ ok: true, storage: 'kv' });
+    } catch (err) {
+      return NextResponse.json(
+        { error: '保存到 KV 失败', detail: String(err) },
+        { status: 500 }
+      );
+    }
+  }
 
-  return NextResponse.json({ ok: true, savedAt: record.submittedAt });
+  // 本地开发：内存列表兜底
+  addSubmission(record);
+  return NextResponse.json({ ok: true, storage: 'memory' });
 }
