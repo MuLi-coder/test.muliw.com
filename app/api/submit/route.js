@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { writeSubmission } from '@/lib/redis';
 
+// 数据写入接口，禁用缓存/预渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function POST(request) {
   let body;
   try {
@@ -21,20 +25,20 @@ export async function POST(request) {
 
   const r = await writeSubmission(record);
 
-  if (!r.ok) {
-    // 有 Redis 配置但写入失败 -> 明确报错
-    return NextResponse.json(
-      {
-        ok: false,
-        error: r.detail.includes('fetch') ? '连接 Redis 失败（请改用 rediss:// TCP 直连）' : '保存到 Redis 失败',
-        detail: r.detail,
-        source: r.source,
-        host: r.host,
-        hint: '请访问 /api/diagnose 查看完整连接诊断',
-      },
-      { status: 500 }
-    );
-  }
+  const res = r.ok
+    ? NextResponse.json({ ok: true, storage: r.storage, source: r.source, host: r.host, detail: r.detail })
+    : NextResponse.json(
+        {
+          ok: false,
+          error: r.detail && r.detail.includes('fetch') ? '连接 Redis 失败' : '保存到 Redis 失败',
+          detail: r.detail,
+          source: r.source,
+          host: r.host,
+          hint: '请访问 /api/diagnose 查看完整连接诊断',
+        },
+        { status: 500 }
+      );
 
-  return NextResponse.json({ ok: true, storage: r.storage, source: r.source, host: r.host, detail: r.detail });
+  res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  return res;
 }

@@ -4,6 +4,9 @@
 import { NextResponse } from 'next/server';
 import { diagnoseRedis } from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   return runDiag();
 }
@@ -16,5 +19,7 @@ async function runDiag() {
   const result = await diagnoseRedis();
   result.timestamp = new Date().toISOString();
   result.runtime = process.env.NEXT_RUNTIME || 'node';
-  return NextResponse.json(result);
+  const res = NextResponse.json(result);
+  res.headers.set('Cache-Control', 'no-store, max-age=0');
+  return res;
 }
