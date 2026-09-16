@@ -2,10 +2,31 @@ import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { addSubmission } from '@/lib/store';
 
-// 尝试从环境变量建立 Redis 连接（Vercel 集成会注入 UPSTASH_REDIS_REST_URL / TOKEN）
+// 从环境变量读取 Redis 连接信息，兼容 Upstash / 旧 Vercel KV 命名
 function getRedis() {
+  const rawUrl =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.UPSTASH_REDIS_URL ||
+    process.env.KV_REST_API_URL ||
+    process.env.KV_URL ||
+    '';
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.UPSTASH_REDIS_TOKEN ||
+    process.env.KV_REST_API_TOKEN ||
+    '';
+
+  if (!rawUrl || !token) return null;
+
+  let url = rawUrl.trim();
+  // redis:// 协议统一转成 REST 的 https 端点
+  if (/^redis?s?:\/\//.test(url)) {
+    url = 'https://' + url.replace(/^redis?s?:\/\//, '');
+  }
+
   try {
-    return Redis.fromEnv();
+    // 关闭自动流水线，避免 /pipeline 端点拼接异常
+    return new Redis({ url, token, enableAutoPipelining: false });
   } catch {
     return null;
   }
@@ -36,8 +57,10 @@ export async function POST(request) {
       await redis.lpush('submissions', JSON.stringify(record));
       return NextResponse.json({ ok: true, storage: 'redis' });
     } catch (err) {
+      // 出错时列出与 Redis 相关的环境变量名（不含值），方便定位
+      const envVars = Object.keys(process.env).filter((k) => /upstash|redis|kv/i.test(k));
       return NextResponse.json(
-        { error: '保存到 Redis 失败', detail: String(err) },
+        { error: '保存到 Redis 失败', detail: String(err), envVars },
         { status: 500 }
       );
     }
