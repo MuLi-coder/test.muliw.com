@@ -23,23 +23,25 @@ npm run dev
 提交后，每次结果作为一个字典（对象）追加保存，包含提交时间和每个景点的选择；
 提交完成后跳转到结果页，读取并展示。
 
-- **Vercel 部署**：结果存入 Vercel KV（`@vercel/kv`），列表键为 `submissions`。
-- **本地开发**：未配置 KV 环境变量时，自动回退为内存列表（`lib/store.js`）。
+- **Vercel 部署**：结果存入 Upstash Redis（`@upstash/redis`），列表键为 `submissions`。
+- **本地开发**：未配置 Redis 环境变量时，自动回退为内存列表（`lib/store.js`）。
 
-### 在 Vercel 配置 KV（必须）
+### 在 Vercel 配置 Redis（必须）
 
-1. Vercel 项目 → **Storage** → **Create Database** → 选 **KV (Redis)** → 创建。
-2. 弹窗选择 **Connect**，把它关联到本项目。
+> 注意：Vercel 原「KV」产品已下线，现在请使用 Marketplace 里的 **Redis（Upstash）** 集成。
+
+1. Vercel 项目 → **Storage** → 安装/创建 **Redis（Upstash）** 数据库。
+2. 把它 **Connect** 到本项目（选择要关联的 Vercel 项目）。
 3. 回到 **Deployments** 重新部署一次（或 Git Push），让环境变量生效。
 
-> 配置完成后 `KV_REST_API_URL`、`KV_REST_API_TOKEN` 会自动注入，无需手动填写。
+> 配置完成后 `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN` 会自动注入，无需手动填写。
 
 ## 技术栈
 
 - Next.js 14（App Router）
 - React 18
 - 原生 JavaScript（JSX）
-- @vercel/kv（提交结果持久化，本地回退内存列表）
+- @upstash/redis（提交结果持久化，本地回退内存列表）
 - 图片为网络搜索获取，可随时在 `lib/spots.js` 中替换为自有图片
 
 ## 目录结构
@@ -47,7 +49,7 @@ npm run dev
 ```
 .
 ├── app/
-│   ├── api/submit/route.js      # 提交 API（KV / 本地内存）
+│   ├── api/submit/route.js      # 提交 API（Redis / 本地内存）
 │   ├── api/submissions/route.js # 读取提交结果 API
 │   ├── spot/[index]/page.jsx    # 景点详情页
 │   ├── summary/page.jsx         # 统计页

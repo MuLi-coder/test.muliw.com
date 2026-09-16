@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 import { addSubmission } from '@/lib/store';
+
+// 尝试从环境变量建立 Redis 连接（Vercel 集成会注入 UPSTASH_REDIS_REST_URL / TOKEN）
+function getRedis() {
+  try {
+    return Redis.fromEnv();
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request) {
   let body;
@@ -20,14 +29,15 @@ export async function POST(request) {
     choices,
   };
 
-  // Vercel：走 KV 持久化
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+  // 线上：写 Upstash Redis（持久化，多实例共享）
+  const redis = getRedis();
+  if (redis) {
     try {
-      await kv.lpush('submissions', JSON.stringify(record));
-      return NextResponse.json({ ok: true, storage: 'kv' });
+      await redis.lpush('submissions', JSON.stringify(record));
+      return NextResponse.json({ ok: true, storage: 'redis' });
     } catch (err) {
       return NextResponse.json(
-        { error: '保存到 KV 失败', detail: String(err) },
+        { error: '保存到 Redis 失败', detail: String(err) },
         { status: 500 }
       );
     }
