@@ -325,3 +325,74 @@ h1 {
     flex-direction: column;
   }
 }
+
+.inline-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.inline-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- 结果页 ---------- */
+.results-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.result-item {
+  padding: 20px 22px;
+}
+
+.result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-index {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.result-time {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.result-count {
+  margin-top: 10px;
+  font-size: 15px;
+  color: #3b4254;
+}
+
+.result-tags {
+  margin-top: 12px;
+}
+
+.result-none {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty {
+  margin-top: 22px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.results-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 26px;
+}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { kv } from '@vercel/kv';
 import fs from 'fs';
 import path from 'path';
 
@@ -15,24 +16,39 @@ export async function POST(request) {
     return NextResponse.json({ error: '缺少 choices 字段' }, { status: 400 });
   }
 
-  const dir = path.join(process.cwd(), 'results');
-  const filename = `submission-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-  const filepath = path.join(dir, filename);
-
-  const payload = {
+  const record = {
     submittedAt: new Date().toISOString(),
     choices,
   };
 
+  // Vercel 上：KV_REST_API_URL / KV_REST_API_TOKEN 会自动注入，走 KV 存储
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    try {
+      await kv.lpush('submissions', JSON.stringify(record));
+      return NextResponse.json({
+        ok: true,
+        storage: 'kv',
+        savedAt: record.submittedAt,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: '保存到 KV 失败', detail: String(err) },
+        { status: 500 }
+      );
+    }
+  }
+
+  // 本地开发 fallback：写文件到 results/
   try {
+    const dir = path.join(process.cwd(), 'results');
+    const filename = `submission-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filepath, JSON.stringify(payload, null, 2), 'utf-8');
+    fs.writeFileSync(path.join(dir, filename), JSON.stringify(record, null, 2), 'utf-8');
+    return NextResponse.json({ ok: true, storage: 'file', file: `results/${filename}` });
   } catch (err) {
     return NextResponse.json(
       { error: '保存结果失败', detail: String(err) },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ ok: true, file: `results/${filename}` });
 }

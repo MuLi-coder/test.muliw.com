@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { spots } from '@/lib/spots';
 
@@ -56,6 +57,9 @@ export default function SummaryPage() {
       <h1>统计页</h1>
       <p className="subtitle">
         打勾表示「可以考虑去」，不打勾表示「不是很想去」。共选了 {goCount} 个景点。
+        <Link href="/results" className="inline-link">
+          查看历史结果 →
+        </Link>
       </p>
 
       <ul className="summary-list card">
@@ -84,7 +88,11 @@ export default function SummaryPage() {
       </div>
 
       {error && <p className="error">提交失败：{error}</p>}
-      {result && <p className="success">已保存到 {result.file}</p>}
+      {result && (
+        <p className="success">
+          {result.storage === 'kv' ? '提交成功，结果已保存' : `已保存到 ${result.file}`}
+        </p>
+      )}
     </main>
   );
 }
