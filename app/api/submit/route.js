@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { resolveRedis } from '@/lib/redis';
-import { addSubmission } from '@/lib/store';
+import { writeSubmission } from '@/lib/redis';
 
 export async function POST(request) {
   let body;
@@ -20,39 +19,22 @@ export async function POST(request) {
     choices,
   };
 
-  // 线上：写 Redis（持久化，多实例共享）
-  const { redis, source, url, reason } = resolveRedis();
-  if (redis) {
-    try {
-      await redis.lpush('submissions', JSON.stringify(record));
-      return NextResponse.json({
-        ok: true,
-        storage: 'redis',
-        source,
-        host: url, // 仅协议+host，不含密码
-      });
-    } catch (err) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: '保存到 Redis 失败',
-          detail: String((err && err.message) || err),
-          source,
-          host: url,
-          reason: reason || '',
-          hint: '请访问 /api/diagnose 查看完整连接诊断',
-        },
-        { status: 500 }
-      );
-    }
+  const r = await writeSubmission(record);
+
+  if (!r.ok) {
+    // 有 Redis 配置但写入失败 -> 明确报错
+    return NextResponse.json(
+      {
+        ok: false,
+        error: r.detail.includes('fetch') ? '连接 Redis 失败（请改用 rediss:// TCP 直连）' : '保存到 Redis 失败',
+        detail: r.detail,
+        source: r.source,
+        host: r.host,
+        hint: '请访问 /api/diagnose 查看完整连接诊断',
+      },
+      { status: 500 }
+    );
   }
 
-  // 本地开发 / 未读到连接信息：内存兜底
-  addSubmission(record);
-  return NextResponse.json({
-    ok: true,
-    storage: 'memory',
-    warning: reason || '未配置 Redis 环境变量，数据仅保存在进程内存，不会持久化',
-    hint: '请访问 /api/diagnose 查看当前部署环境实际注入的 Redis 变量',
-  });
+  return NextResponse.json({ ok: true, storage: r.storage, source: r.source, host: r.host, detail: r.detail });
 }
